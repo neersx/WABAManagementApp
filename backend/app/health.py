@@ -14,7 +14,7 @@ from prometheus_client import (
 from .db import get_db
 from .queue import queue_depth
 
-router = APIRouter(tags=["health"])
+router = APIRouter(prefix="/api", tags=["health"])
 
 registry = CollectorRegistry()
 webhook_received = Counter(

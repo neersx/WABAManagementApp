@@ -1,56 +1,63 @@
-import { useEffect } from "react";
 import "@/App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
-import axios from "axios";
-import { HOME } from "@/constants/testIds";
+import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
+import { Toaster } from "@/components/ui/sonner";
+import { AuthProvider } from "@/context/AuthContext";
+import ProtectedRoute from "@/components/ProtectedRoute";
 
-const BACKEND_URL = process.env.REACT_APP_BACKEND_URL;
-const API = `${BACKEND_URL}/api`;
+import HomePage from "@/pages/marketing/HomePage";
+import PricingPage from "@/pages/marketing/PricingPage";
+import FeaturesPage from "@/pages/marketing/FeaturesPage";
+import ContactPage from "@/pages/marketing/ContactPage";
 
-const Home = () => {
-  const helloWorldApi = async () => {
-    try {
-      const response = await axios.get(`${API}/`);
-      console.log(response.data.message);
-    } catch (e) {
-      console.error(e, `errored out requesting / api`);
-    }
-  };
+import LoginPage from "@/pages/auth/LoginPage";
+import RegisterPage from "@/pages/auth/RegisterPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 
-  useEffect(() => {
-    helloWorldApi();
-  }, []);
-
-  return (
-    <div>
-      <header className="App-header">
-        <a
-          data-testid={HOME.emergentLink}
-          className="App-link"
-          href="https://emergent.sh"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          <img src="https://avatars.githubusercontent.com/in/1201222?s=120&u=2686cf91179bbafbc7a71bfbc43004cf9ae1acea&v=4" />
-        </a>
-        <p className="mt-5">Building something incredible ~!</p>
-      </header>
-    </div>
-  );
-};
+import DashboardPage from "@/pages/admin/DashboardPage";
+import ConnectPage from "@/pages/admin/ConnectPage";
+import WabasPage from "@/pages/admin/WabasPage";
+import SendPage from "@/pages/admin/SendPage";
+import MessagesPage from "@/pages/admin/MessagesPage";
+import SecurityPage from "@/pages/admin/SecurityPage";
 
 function App() {
-  return (
-    <div className="App">
-      <BrowserRouter>
-        <Routes>
-          <Route path="/" element={<Home />}>
-            <Route index element={<Home />} />
-          </Route>
-        </Routes>
-      </BrowserRouter>
-    </div>
-  );
+    return (
+        <div className="App">
+            <AuthProvider>
+                <BrowserRouter>
+                    <Routes>
+                        {/* Marketing */}
+                        <Route path="/" element={<HomePage />} />
+                        <Route path="/pricing" element={<PricingPage />} />
+                        <Route path="/features" element={<FeaturesPage />} />
+                        <Route path="/contact" element={<ContactPage />} />
+
+                        {/* Auth */}
+                        <Route path="/login" element={<LoginPage />} />
+                        <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/forgot-password" element={<ForgotPasswordPage />} />
+                        <Route path="/reset-password" element={<ResetPasswordPage />} />
+
+                        {/* Admin (protected) */}
+                        <Route element={<ProtectedRoute />}>
+                            <Route path="/app" element={<Navigate to="/app/dashboard" replace />} />
+                            <Route path="/app/dashboard" element={<DashboardPage />} />
+                            <Route path="/app/connect" element={<ConnectPage />} />
+                            <Route path="/app/wabas" element={<WabasPage />} />
+                            <Route path="/app/send" element={<SendPage />} />
+                            <Route path="/app/messages" element={<MessagesPage />} />
+                            <Route path="/app/security" element={<SecurityPage />} />
+                        </Route>
+
+                        {/* Fallback */}
+                        <Route path="*" element={<Navigate to="/" replace />} />
+                    </Routes>
+                    <Toaster position="top-right" richColors closeButton />
+                </BrowserRouter>
+            </AuthProvider>
+        </div>
+    );
 }
 
 export default App;
