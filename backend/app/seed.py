@@ -65,3 +65,18 @@ async def seed_initial_data() -> None:
             }
         )
         logger.info(f"Seeded demo tenant ({DEMO_TENANT_NAME}) + owner: {DEMO_OWNER_EMAIL}")
+    else:
+        # Demo account exists — reset to clean state on every startup so tests / demos
+        # don't get poisoned by previous MFA enrollment, password changes, etc.
+        await db.users.update_one(
+            {"email": DEMO_OWNER_EMAIL},
+            {
+                "$set": {
+                    "password_hash": hash_password(DEMO_OWNER_PASSWORD),
+                    "mfa_enabled": False,
+                    "mfa_required": False,
+                },
+                "$unset": {"mfa_secret_encrypted": "", "mfa_secret_pending_encrypted": ""},
+            },
+        )
+        logger.info(f"Reset demo account state: {DEMO_OWNER_EMAIL} (MFA disabled, password restored)")

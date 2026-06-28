@@ -125,7 +125,7 @@ export default function AppShell({ children }) {
                     </div>
                     <div className="flex items-center gap-3">
                         <span
-                            className="hidden rounded-full border bg-[hsl(38_92%_95%)] px-2.5 py-0.5 text-xs font-medium text-[hsl(38_92%_28%)] sm:inline-flex"
+                            className="rounded-full border bg-[hsl(38_92%_95%)] px-2.5 py-0.5 text-xs font-medium text-[hsl(38_92%_28%)] inline-flex"
                             data-testid="admin-mock-badge"
                         >
                             MOCK MODE
