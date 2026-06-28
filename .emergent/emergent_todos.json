@@ -1,38 +1,26 @@
 [
   {
-    "content": "Phase 1: Install deps",
+    "content": "Phase 1: POC tested + passing (all 10 core stories)",
     "status": "completed"
   },
   {
-    "content": "Phase 1: Build POC core",
+    "content": "Phase 2: Backend full build",
     "status": "completed"
   },
   {
-    "content": "Phase 1: Write test_core.py",
+    "content": "Phase 2: Frontend full build",
     "status": "completed"
   },
   {
-    "content": "Phase 1: Run POC and fix until green (ALL 10 user stories pass)",
+    "content": "Phase 3: testing_agent_v3 backend (22/22 pass)",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Get design guidelines from design_agent",
+    "content": "Phase 3: testing_agent_v3 frontend (7/7 pass after fixes)",
     "status": "completed"
   },
   {
-    "content": "Phase 2: Frontend full build (marketing site + admin SPA)",
+    "content": "Phase 4: README + memory + finish",
     "status": "completed"
-  },
-  {
-    "content": "Phase 2: All user stories covered in development (US1-US16)",
-    "status": "completed"
-  },
-  {
-    "content": "Phase 3: Run testing_agent_v3 end-to-end and fix all bugs",
-    "status": "in_progress"
-  },
-  {
-    "content": "Phase 4: Polish + finish",
-    "status": "pending"
   }
 ]
