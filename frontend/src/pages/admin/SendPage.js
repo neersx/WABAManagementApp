@@ -13,8 +13,8 @@ import {
 } from "@/components/ui/select";
 import { api } from "@/lib/api";
 import { toast } from "sonner";
-import { Send, Loader2 } from "lucide-react";
-import { useNavigate } from "react-router-dom";
+import { Send, Loader2, FileText } from "lucide-react";
+import { useNavigate, Link } from "react-router-dom";
 
 function randomKey() {
     return `key-${Math.random().toString(36).slice(2, 10)}-${Date.now()}`;
@@ -23,6 +23,7 @@ function randomKey() {
 export default function SendPage() {
     const navigate = useNavigate();
     const [phones, setPhones] = useState([]);
+    const [templates, setTemplates] = useState([]);
     const [form, setForm] = useState({
         phone_number_id: "",
         to_wa_id: "",
@@ -35,15 +36,35 @@ export default function SendPage() {
     useEffect(() => {
         (async () => {
             try {
-                const r = await api.get("/phone-numbers");
-                setPhones(r.data);
-                if (r.data.length && !form.phone_number_id) {
-                    setForm((f) => ({ ...f, phone_number_id: r.data[0].phone_number_id }));
-                }
+                const [pr, tr] = await Promise.all([
+                    api.get("/phone-numbers"),
+                    api.get("/templates"),
+                ]);
+                setPhones(pr.data);
+                setTemplates(tr.data);
+                setForm((f) => {
+                    const next = { ...f };
+                    if (pr.data.length && !f.phone_number_id) {
+                        next.phone_number_id = pr.data[0].phone_number_id;
+                    }
+                    if (tr.data.length) {
+                        next.template_name = tr.data[0].name;
+                        next.language_code = tr.data[0].language;
+                    }
+                    return next;
+                });
             } catch {}
         })();
-        // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
+
+    const onTemplateChange = (name) => {
+        const t = templates.find((x) => x.name === name);
+        setForm((f) => ({
+            ...f,
+            template_name: name,
+            language_code: t?.language || f.language_code,
+        }));
+    };
 
     const submit = async (e) => {
         e.preventDefault();
@@ -77,6 +98,11 @@ export default function SendPage() {
                 breadcrumb={<span>Admin / Send Template</span>}
                 title="Send Template Message"
                 description="In mock mode, the platform returns a synthetic wamid and you can simulate the webhook to advance the status."
+                actions={
+                    <Button asChild variant="outline" data-testid="send-manage-templates">
+                        <Link to="/app/templates"><FileText className="mr-2 h-4 w-4" /> Manage templates</Link>
+                    </Button>
+                }
             />
             <form
                 onSubmit={submit}
@@ -121,13 +147,30 @@ export default function SendPage() {
                         </p>
                     </div>
                     <div>
-                        <Label htmlFor="template_name">Template name</Label>
-                        <Input
-                            id="template_name"
-                            value={form.template_name}
-                            onChange={(e) => setForm({ ...form, template_name: e.target.value })}
-                            data-testid="send-template-name-input"
-                        />
+                        <Label>Template</Label>
+                        {templates.length > 0 ? (
+                            <Select value={form.template_name} onValueChange={onTemplateChange}>
+                                <SelectTrigger data-testid="send-template-select">
+                                    <SelectValue />
+                                </SelectTrigger>
+                                <SelectContent>
+                                    {templates.map((t) => (
+                                        <SelectItem key={`${t.id}`} value={t.name}>
+                                            {t.name} <span className="text-xs text-muted-foreground">· {t.language}</span>
+                                        </SelectItem>
+                                    ))}
+                                </SelectContent>
+                            </Select>
+                        ) : (
+                            <Input
+                                value={form.template_name}
+                                onChange={(e) => setForm({ ...form, template_name: e.target.value })}
+                                data-testid="send-template-name-input"
+                            />
+                        )}
+                        <p className="mt-1 text-xs text-muted-foreground">
+                            Sync templates from <Link to="/app/templates" className="text-primary">Templates</Link>.
+                        </p>
                     </div>
                     <div>
                         <Label htmlFor="language_code">Language code</Label>

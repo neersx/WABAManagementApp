@@ -104,11 +104,11 @@ async def main() -> None:
     async with httpx.AsyncClient(timeout=15.0) as anon:
         # --- US-J: health ---
         try:
-            r = await anon.get(f"{BASE}/health/live")
+            r = await anon.get(f"{BASE}/api/health/live")
             assert r.status_code == 200 and r.json().get("status") == "ok"
-            r = await anon.get(f"{BASE}/health/ready")
+            r = await anon.get(f"{BASE}/api/health/ready")
             assert r.status_code == 200 and r.json().get("db") is True
-            r = await anon.get(f"{BASE}/metrics")
+            r = await anon.get(f"{BASE}/api/metrics")
             assert r.status_code == 200 and "mq_queue_depth" in r.text
             print("[OK] US-J: health + metrics")
         except Exception as e:

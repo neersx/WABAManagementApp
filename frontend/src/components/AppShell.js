@@ -21,6 +21,10 @@ import {
     MessageCircle,
     Menu,
     X,
+    FileText,
+    Inbox,
+    BarChart3,
+    Settings,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -29,9 +33,13 @@ const nav = [
     { to: "/app/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { to: "/app/connect", label: "Connect WhatsApp", icon: Plug },
     { to: "/app/wabas", label: "WABAs & Numbers", icon: Smartphone },
+    { to: "/app/templates", label: "Templates", icon: FileText },
     { to: "/app/send", label: "Send Template", icon: Send },
     { to: "/app/messages", label: "Message Log", icon: MessageSquareText },
+    { to: "/app/inbox", label: "Inbox", icon: Inbox },
+    { to: "/app/analytics", label: "Analytics", icon: BarChart3 },
     { to: "/app/security", label: "Security", icon: ShieldCheck },
+    { to: "/app/settings", label: "Settings", icon: Settings },
 ];
 
 export default function AppShell({ children }) {

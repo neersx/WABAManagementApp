@@ -22,13 +22,16 @@ from loguru import logger
 from starlette.middleware.cors import CORSMiddleware
 
 from app.admin_routes import router as admin_router
+from app.analytics import router as analytics_router
 from app.auth_routes import router as auth_router
 from app.config import settings
 from app.db import close_db, ensure_indexes, get_db
 from app.health import router as health_router
+from app.inbox import router as inbox_router
 from app.messaging import router as messaging_router
 from app.onboarding import router as onboarding_router
 from app.seed import seed_initial_data
+from app.templates import router as templates_router
 from app.webhooks import router as webhook_router
 from app.worker import start_worker, stop_worker
 
@@ -99,6 +102,9 @@ async def trace_id_mw(request: Request, call_next):
 app.include_router(auth_router)
 app.include_router(onboarding_router)
 app.include_router(messaging_router)
+app.include_router(templates_router)
+app.include_router(inbox_router)
+app.include_router(analytics_router)
 app.include_router(admin_router)
 app.include_router(webhook_router)
 app.include_router(health_router)
@@ -110,4 +116,28 @@ async def root():
         "app": "whatsapp-saas",
         "version": "1.0.0-mvp",
         "mock_mode": settings.META_MOCK_MODE,
+    }
+
+
+@app.get("/api/system/info")
+async def system_info():
+    """Public system info — does NOT include any secret values."""
+    return {
+        "app": "whatsapp-saas",
+        "version": "1.0.0-mvp",
+        "mock_mode": settings.META_MOCK_MODE,
+        "meta_graph_api_version": settings.META_GRAPH_API_VERSION,
+        "meta_app_id_configured": bool(settings.META_APP_ID and settings.META_APP_ID != "000000000000000"),
+        "meta_embedded_signup_config_id_configured": bool(
+            settings.META_EMBEDDED_SIGNUP_CONFIG_ID
+            and settings.META_EMBEDDED_SIGNUP_CONFIG_ID != "000000000000000"
+        ),
+        "meta_webhook_verify_token_configured": bool(
+            settings.META_WEBHOOK_VERIFY_TOKEN
+            and settings.META_WEBHOOK_VERIFY_TOKEN != "mock-verify-token"
+        ),
+        "worker_enabled": settings.WORKER_ENABLED,
+        "send_rate_limit_per_min": settings.SEND_RATE_LIMIT_PER_MIN,
+        "access_token_ttl_minutes": settings.ACCESS_TOKEN_TTL_MINUTES,
+        "refresh_token_ttl_days": settings.REFRESH_TOKEN_TTL_DAYS,
     }

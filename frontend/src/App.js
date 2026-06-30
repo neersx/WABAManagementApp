@@ -17,9 +17,13 @@ import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import DashboardPage from "@/pages/admin/DashboardPage";
 import ConnectPage from "@/pages/admin/ConnectPage";
 import WabasPage from "@/pages/admin/WabasPage";
+import TemplatesPage from "@/pages/admin/TemplatesPage";
 import SendPage from "@/pages/admin/SendPage";
 import MessagesPage from "@/pages/admin/MessagesPage";
+import InboxPage from "@/pages/admin/InboxPage";
+import AnalyticsPage from "@/pages/admin/AnalyticsPage";
 import SecurityPage from "@/pages/admin/SecurityPage";
+import SettingsPage from "@/pages/admin/SettingsPage";
 
 function App() {
     return (
@@ -45,9 +49,13 @@ function App() {
                             <Route path="/app/dashboard" element={<DashboardPage />} />
                             <Route path="/app/connect" element={<ConnectPage />} />
                             <Route path="/app/wabas" element={<WabasPage />} />
+                            <Route path="/app/templates" element={<TemplatesPage />} />
                             <Route path="/app/send" element={<SendPage />} />
                             <Route path="/app/messages" element={<MessagesPage />} />
+                            <Route path="/app/inbox" element={<InboxPage />} />
+                            <Route path="/app/analytics" element={<AnalyticsPage />} />
                             <Route path="/app/security" element={<SecurityPage />} />
+                            <Route path="/app/settings" element={<SettingsPage />} />
                         </Route>
 
                         {/* Fallback */}

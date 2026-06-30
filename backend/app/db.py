@@ -76,6 +76,14 @@ async def ensure_indexes() -> None:
     await db.audit_log.create_indexes([
         IndexModel([("tenant_id", ASCENDING), ("created_at", DESCENDING)], name="by_tenant_time"),
     ])
+    await db.templates.create_indexes([
+        IndexModel([("tenant_id", ASCENDING), ("waba_id", ASCENDING)], name="by_tenant_waba"),
+        IndexModel(
+            [("tenant_id", ASCENDING), ("waba_id", ASCENDING), ("name", ASCENDING), ("language", ASCENDING)],
+            unique=True,
+            name="uniq_template",
+        ),
+    ])
     logger.info("MongoDB indexes ensured")
 
 
