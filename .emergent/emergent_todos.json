@@ -16,19 +16,15 @@
     "status": "completed"
   },
   {
-    "content": "Phase 9a: Playwright tests written",
+    "content": "Phase 9: Playwright E2E suite + GH Actions workflow",
     "status": "completed"
   },
   {
-    "content": "Phase 9b: GitHub Actions workflow + quick sanity-check that suite is loadable",
+    "content": "Phase 10: testing_agent_v3 verification (iteration_3 + iteration_4: 100%)",
+    "status": "completed"
+  },
+  {
+    "content": "Phase 11: Finish with comprehensive summary",
     "status": "in_progress"
-  },
-  {
-    "content": "Phase 10: testing_agent_v3 final pass on new features",
-    "status": "pending"
-  },
-  {
-    "content": "Phase 11: Finish",
-    "status": "pending"
   }
 ]
