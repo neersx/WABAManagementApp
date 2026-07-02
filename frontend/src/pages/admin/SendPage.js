@@ -24,6 +24,7 @@ export default function SendPage() {
     const navigate = useNavigate();
     const [phones, setPhones] = useState([]);
     const [templates, setTemplates] = useState([]);
+    const [selectedTemplateId, setSelectedTemplateId] = useState("");
     const [form, setForm] = useState({
         phone_number_id: "",
         to_wa_id: "",
@@ -50,6 +51,7 @@ export default function SendPage() {
                     if (tr.data.length) {
                         next.template_name = tr.data[0].name;
                         next.language_code = tr.data[0].language;
+                        setSelectedTemplateId(tr.data[0].id);
                     }
                     return next;
                 });
@@ -57,13 +59,16 @@ export default function SendPage() {
         })();
     }, []);
 
-    const onTemplateChange = (name) => {
-        const t = templates.find((x) => x.name === name);
-        setForm((f) => ({
-            ...f,
-            template_name: name,
-            language_code: t?.language || f.language_code,
-        }));
+    const onTemplateChange = (templateId) => {
+        const t = templates.find((x) => x.id === templateId);
+        if (t) {
+            setSelectedTemplateId(templateId);
+            setForm((f) => ({
+                ...f,
+                template_name: t.name,
+                language_code: t.language,
+            }));
+        }
     };
 
     const submit = async (e) => {
@@ -149,13 +154,13 @@ export default function SendPage() {
                     <div>
                         <Label>Template</Label>
                         {templates.length > 0 ? (
-                            <Select value={form.template_name} onValueChange={onTemplateChange}>
+                            <Select value={selectedTemplateId} onValueChange={onTemplateChange}>
                                 <SelectTrigger data-testid="send-template-select">
                                     <SelectValue />
                                 </SelectTrigger>
                                 <SelectContent>
                                     {templates.map((t) => (
-                                        <SelectItem key={`${t.id}`} value={t.name}>
+                                        <SelectItem key={t.id} value={t.id}>
                                             {t.name} <span className="text-xs text-muted-foreground">· {t.language}</span>
                                         </SelectItem>
                                     ))}
