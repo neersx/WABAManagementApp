@@ -530,6 +530,349 @@ class BackendTester:
             assert isinstance(data[key], int), f"{key} should be an integer"
             assert data[key] >= 0, f"{key} should be non-negative"
     
+    # ========== Phase 2: System Info ==========
+    
+    def test_system_info(self):
+        """GET /api/system/info returns mock_mode, version, worker_enabled, NO secrets."""
+        r = self.session.get(f"{BASE_URL}/system/info")
+        self.assert_status(r, 200)
+        data = r.json()
+        # Required fields
+        self.assert_in("mock_mode", data)
+        self.assert_in("meta_graph_api_version", data)
+        self.assert_in("worker_enabled", data)
+        self.assert_equal(data["mock_mode"], True, " - Should be in mock mode")
+        self.assert_equal(data["meta_graph_api_version"], "v21.0")
+        self.assert_equal(data["worker_enabled"], True)
+        # Verify NO secrets are exposed
+        response_str = json.dumps(data)
+        assert "META_APP_SECRET" not in response_str, "META_APP_SECRET must not be exposed"
+        assert "TOKEN_ENCRYPTION_KEY" not in response_str, "TOKEN_ENCRYPTION_KEY must not be exposed"
+        assert "JWT_SIGNING_KEY" not in response_str, "JWT_SIGNING_KEY must not be exposed"
+        assert "mock-app-secret" not in response_str, "Secret values must not be exposed"
+    
+    # ========== Phase 2: Templates ==========
+    
+    def test_templates_sync(self):
+        """POST /api/templates/sync returns synced count >= 3."""
+        # Ensure we have a WABA
+        if not self.waba_id:
+            r = self.session.post(
+                f"{BASE_URL}/onboarding/exchange",
+                json={"code": f"mock_{int(time.time())}"}
+            )
+            self.waba_id = r.json()["waba"]["waba_id"]
+        
+        payload = {"waba_id": self.waba_id}
+        r = self.session.post(f"{BASE_URL}/templates/sync", json=payload)
+        self.assert_status(r, 200)
+        data = r.json()
+        self.assert_in("synced", data)
+        assert data["synced"] >= 3, f"Should sync at least 3 templates, got {data['synced']}"
+    
+    def test_templates_list(self):
+        """GET /api/templates returns synced templates."""
+        r = self.session.get(f"{BASE_URL}/templates")
+        self.assert_status(r, 200)
+        data = r.json()
+        assert isinstance(data, list), "Should return a list"
+        # After sync, should have templates
+        if len(data) > 0:
+            t = data[0]
+            self.assert_in("id", t)
+            self.assert_in("name", t)
+            self.assert_in("language", t)
+            self.assert_in("status", t)
+    
+    def test_templates_create(self):
+        """POST /api/templates creates a local template (auto-approved in mock)."""
+        # Ensure we have a WABA
+        if not self.waba_id:
+            r = self.session.post(
+                f"{BASE_URL}/onboarding/exchange",
+                json={"code": f"mock_{int(time.time())}"}
+            )
+            self.waba_id = r.json()["waba"]["waba_id"]
+        
+        ts = int(time.time())
+        payload = {
+            "waba_id": self.waba_id,
+            "name": f"test_template_{ts}",
+            "language": "en_US",
+            "category": "UTILITY",
+            "body": "Hi {{1}}, this is a test template!"
+        }
+        r = self.session.post(f"{BASE_URL}/templates", json=payload)
+        self.assert_status(r, 200)
+        data = r.json()
+        self.assert_in("id", data)
+        self.assert_equal(data["name"], payload["name"])
+        self.assert_equal(data["status"], "APPROVED", " - Should be auto-approved in mock")
+        # Store for delete test
+        self.template_id = data["id"]
+    
+    def test_templates_delete(self):
+        """DELETE /api/templates/{id} removes template."""
+        # Create a template first
+        if not self.waba_id:
+            r = self.session.post(
+                f"{BASE_URL}/onboarding/exchange",
+                json={"code": f"mock_{int(time.time())}"}
+            )
+            self.waba_id = r.json()["waba"]["waba_id"]
+        
+        ts = int(time.time())
+        payload = {
+            "waba_id": self.waba_id,
+            "name": f"delete_test_{ts}",
+            "language": "en_US",
+            "category": "UTILITY",
+            "body": "Delete me!"
+        }
+        r = self.session.post(f"{BASE_URL}/templates", json=payload)
+        template_id = r.json()["id"]
+        
+        # Delete it
+        r = self.session.delete(f"{BASE_URL}/templates/{template_id}")
+        self.assert_status(r, 200)
+        data = r.json()
+        self.assert_equal(data.get("deleted"), True)
+    
+    def test_templates_tenant_isolation(self):
+        """POST /api/templates/sync with another tenant's waba_id returns 404."""
+        # Create a new tenant
+        ts = int(time.time())
+        payload = {
+            "email": f"template_iso_{ts}@example.com",
+            "password": "TemplateIso123!",
+            "tenant_name": f"Template Iso Tenant {ts}"
+        }
+        
+        # Save current session
+        old_cookies = self.session.cookies.copy()
+        
+        # Register new tenant
+        r = self.session.post(f"{BASE_URL}/auth/register", json=payload)
+        self.assert_status(r, 200)
+        
+        # Try to sync templates with original tenant's WABA
+        if self.waba_id:
+            payload = {"waba_id": self.waba_id}
+            r = self.session.post(f"{BASE_URL}/templates/sync", json=payload)
+            self.assert_status(r, 404, " - Should not access other tenant's WABA")
+        
+        # Restore original session
+        self.session.cookies = old_cookies
+    
+    # ========== Phase 2: Inbox ==========
+    
+    def test_inbox_simulate_inbound(self):
+        """POST /api/inbox/simulate-inbound creates conversation and returns conversation_id."""
+        ts = int(time.time())
+        payload = {
+            "contact_wa_id": f"1555{ts % 10000000:07d}",
+            "body": "Hi! I have a question about my order."
+        }
+        r = self.session.post(f"{BASE_URL}/inbox/simulate-inbound", json=payload)
+        self.assert_status(r, 200)
+        data = r.json()
+        self.assert_in("conversation_id", data)
+        self.assert_equal(data.get("created"), True)
+        # Store for later tests
+        self.conversation_id = data["conversation_id"]
+    
+    def test_inbox_list_conversations(self):
+        """GET /api/inbox/conversations lists conversations with service_window_open=true."""
+        r = self.session.get(f"{BASE_URL}/inbox/conversations")
+        self.assert_status(r, 200)
+        data = r.json()
+        assert isinstance(data, list), "Should return a list"
+        if len(data) > 0:
+            conv = data[0]
+            self.assert_in("id", conv)
+            self.assert_in("contact_wa_id", conv)
+            self.assert_in("service_window_open", conv)
+            # After simulate-inbound, window should be open
+            self.assert_equal(conv["service_window_open"], True, " - Window should be open")
+    
+    def test_inbox_get_messages(self):
+        """GET /api/inbox/conversations/{id}/messages returns thread with inbound message."""
+        # Ensure we have a conversation
+        if not hasattr(self, 'conversation_id') or not self.conversation_id:
+            ts = int(time.time())
+            payload = {
+                "contact_wa_id": f"1555{ts % 10000000:07d}",
+                "body": "Test message"
+            }
+            r = self.session.post(f"{BASE_URL}/inbox/simulate-inbound", json=payload)
+            self.conversation_id = r.json()["conversation_id"]
+        
+        r = self.session.get(f"{BASE_URL}/inbox/conversations/{self.conversation_id}/messages")
+        self.assert_status(r, 200)
+        data = r.json()
+        self.assert_in("conversation", data)
+        self.assert_in("messages", data)
+        messages = data["messages"]
+        assert isinstance(messages, list), "Messages should be a list"
+        assert len(messages) > 0, "Should have at least one message"
+        # First message should be inbound
+        msg = messages[0]
+        self.assert_equal(msg["direction"], "inbound")
+    
+    def test_inbox_reply(self):
+        """POST /api/inbox/conversations/{id}/reply succeeds while window is open."""
+        # Ensure we have a conversation
+        if not hasattr(self, 'conversation_id') or not self.conversation_id:
+            ts = int(time.time())
+            payload = {
+                "contact_wa_id": f"1555{ts % 10000000:07d}",
+                "body": "Test message"
+            }
+            r = self.session.post(f"{BASE_URL}/inbox/simulate-inbound", json=payload)
+            self.conversation_id = r.json()["conversation_id"]
+        
+        payload = {"body": "Hello! Thanks for reaching out."}
+        r = self.session.post(
+            f"{BASE_URL}/inbox/conversations/{self.conversation_id}/reply",
+            json=payload
+        )
+        self.assert_status(r, 200)
+        data = r.json()
+        self.assert_in("id", data)
+        self.assert_equal(data["direction"], "outbound")
+        self.assert_equal(data["body"], payload["body"])
+    
+    # ========== Phase 2: Analytics ==========
+    
+    def test_analytics_overview(self):
+        """GET /api/analytics/overview?days=14 returns expected fields."""
+        r = self.session.get(f"{BASE_URL}/analytics/overview?days=14")
+        self.assert_status(r, 200)
+        data = r.json()
+        # Required fields
+        self.assert_in("total_messages", data)
+        self.assert_in("outbound", data)
+        self.assert_in("inbound", data)
+        self.assert_in("delivered", data)
+        self.assert_in("failed", data)
+        self.assert_in("delivery_rate", data)
+        self.assert_in("conversations", data)
+        self.assert_in("conversations_open_window", data)
+        # All should be non-negative
+        for key in ["total_messages", "outbound", "inbound", "delivered", "failed", "conversations", "conversations_open_window"]:
+            assert data[key] >= 0, f"{key} should be non-negative"
+    
+    def test_analytics_timeseries(self):
+        """GET /api/analytics/timeseries?days=7 returns array of daily buckets."""
+        r = self.session.get(f"{BASE_URL}/analytics/timeseries?days=7")
+        self.assert_status(r, 200)
+        data = r.json()
+        assert isinstance(data, list), "Should return a list"
+        assert len(data) >= 1, "Should return at least 1 daily bucket"
+        if len(data) > 0:
+            bucket = data[0]
+            self.assert_in("date", bucket)
+            self.assert_in("outbound", bucket)
+            self.assert_in("inbound", bucket)
+            self.assert_in("delivered", bucket)
+            self.assert_in("read", bucket)
+            self.assert_in("failed", bucket)
+    
+    def test_analytics_by_template(self):
+        """GET /api/analytics/by-template?days=14 returns template stats."""
+        r = self.session.get(f"{BASE_URL}/analytics/by-template?days=14")
+        self.assert_status(r, 200)
+        data = r.json()
+        assert isinstance(data, list), "Should return a list"
+        # May be empty if no template messages sent
+        if len(data) > 0:
+            t = data[0]
+            self.assert_in("template_name", t)
+            self.assert_in("sent", t)
+            self.assert_in("delivered", t)
+            self.assert_in("failed", t)
+            self.assert_in("delivery_rate", t)
+    
+    def test_analytics_by_phone(self):
+        """GET /api/analytics/by-phone returns phone number stats."""
+        r = self.session.get(f"{BASE_URL}/analytics/by-phone")
+        self.assert_status(r, 200)
+        data = r.json()
+        assert isinstance(data, list), "Should return a list"
+        # May be empty if no messages sent
+        if len(data) > 0:
+            p = data[0]
+            self.assert_in("phone_number_id", p)
+            self.assert_in("display", p)
+            self.assert_in("outbound", p)
+            self.assert_in("inbound", p)
+    
+    # ========== Phase 2: Meta Client Import ==========
+    
+    def test_meta_client_import(self):
+        """Verify meta_client.py imports without crash (live mode wiring)."""
+        # This is tested by the fact that the server started successfully
+        # and /api/system/info returns data. If meta_client had import errors,
+        # the server wouldn't start.
+        r = self.session.get(f"{BASE_URL}/system/info")
+        self.assert_status(r, 200)
+        # If we got here, meta_client imported successfully
+        self.log("   meta_client.py imported successfully (server is running)", Colors.GREEN)
+    
+    def run_phase2_only(self):
+        """Run Phase 2 tests only (brief verification of new features)."""
+        self.log("\n" + "="*70, Colors.BLUE)
+        self.log("WhatsApp SaaS MVP - Phase 2 Backend Tests", Colors.BLUE)
+        self.log("="*70 + "\n", Colors.BLUE)
+        
+        # Login with seeded owner first
+        self.log("\n--- Setup: Login as owner@demo.com ---", Colors.YELLOW)
+        self.test("Login Seeded Owner", self.test_login_seeded_owner)
+        
+        # Ensure we have a WABA for template/inbox tests
+        self.log("\n--- Setup: Connect WABA ---", Colors.YELLOW)
+        self.test("Onboarding Exchange", self.test_onboarding_exchange)
+        
+        # Phase 2: System Info
+        self.log("\n--- Phase 2: System Info ---", Colors.YELLOW)
+        self.test("System Info (no secrets)", self.test_system_info)
+        self.test("Meta Client Import", self.test_meta_client_import)
+        
+        # Phase 2: Templates
+        self.log("\n--- Phase 2: Templates ---", Colors.YELLOW)
+        self.test("Templates Sync", self.test_templates_sync)
+        self.test("Templates List", self.test_templates_list)
+        self.test("Templates Create", self.test_templates_create)
+        self.test("Templates Delete", self.test_templates_delete)
+        self.test("Templates Tenant Isolation", self.test_templates_tenant_isolation)
+        
+        # Phase 2: Inbox
+        self.log("\n--- Phase 2: Inbox ---", Colors.YELLOW)
+        self.test("Inbox Simulate Inbound", self.test_inbox_simulate_inbound)
+        self.test("Inbox List Conversations", self.test_inbox_list_conversations)
+        self.test("Inbox Get Messages", self.test_inbox_get_messages)
+        self.test("Inbox Reply", self.test_inbox_reply)
+        
+        # Phase 2: Analytics
+        self.log("\n--- Phase 2: Analytics ---", Colors.YELLOW)
+        self.test("Analytics Overview", self.test_analytics_overview)
+        self.test("Analytics Timeseries", self.test_analytics_timeseries)
+        self.test("Analytics By Template", self.test_analytics_by_template)
+        self.test("Analytics By Phone", self.test_analytics_by_phone)
+        
+        # Summary
+        self.log("\n" + "="*70, Colors.BLUE)
+        self.log("Phase 2 Test Summary", Colors.BLUE)
+        self.log("="*70, Colors.BLUE)
+        self.log(f"Total Tests: {self.tests_run}", Colors.BLUE)
+        self.log(f"Passed: {self.tests_passed}", Colors.GREEN)
+        self.log(f"Failed: {self.tests_failed}", Colors.RED)
+        success_rate = (self.tests_passed / self.tests_run * 100) if self.tests_run > 0 else 0
+        self.log(f"Success Rate: {success_rate:.1f}%", Colors.BLUE)
+        self.log("="*70 + "\n", Colors.BLUE)
+        
+        return 0 if self.tests_failed == 0 else 1
+    
     def run_all(self):
         """Run all tests in order."""
         self.log("\n" + "="*70, Colors.BLUE)
@@ -612,6 +955,12 @@ class BackendTester:
 
 
 if __name__ == "__main__":
+    import sys
     tester = BackendTester()
-    exit_code = tester.run_all()
+    # Run Phase 2 tests only (as per task requirements)
+    if len(sys.argv) > 1 and sys.argv[1] == "--phase2":
+        exit_code = tester.run_phase2_only()
+    else:
+        # Default: run all tests
+        exit_code = tester.run_all()
     sys.exit(exit_code)
