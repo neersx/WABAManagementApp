@@ -121,12 +121,18 @@ async def root():
 
 @app.get("/api/system/info")
 async def system_info():
-    """Public system info — does NOT include any secret values."""
+    """Public system info. The app_id + embedded_signup_config_id ARE public
+    (they're embedded into the front-end FB JS SDK anyway); the secret and
+    verify-token are NEVER returned."""
     return {
         "app": "whatsapp-saas",
         "version": "1.0.0-mvp",
         "mock_mode": settings.META_MOCK_MODE,
         "meta_graph_api_version": settings.META_GRAPH_API_VERSION,
+        "meta_app_id": settings.META_APP_ID if not settings.META_MOCK_MODE else "",
+        "meta_embedded_signup_config_id": (
+            settings.META_EMBEDDED_SIGNUP_CONFIG_ID if not settings.META_MOCK_MODE else ""
+        ),
         "meta_app_id_configured": bool(settings.META_APP_ID and settings.META_APP_ID != "000000000000000"),
         "meta_embedded_signup_config_id_configured": bool(
             settings.META_EMBEDDED_SIGNUP_CONFIG_ID

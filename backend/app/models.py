@@ -105,6 +105,7 @@ class EmbeddedSignupExchange(BaseModel):
     code: str
     waba_id: str | None = None
     phone_number_id: str | None = None
+    business_id: str | None = None
 
 
 # ---------- Messaging ----------

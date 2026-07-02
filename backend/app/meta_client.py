@@ -251,6 +251,51 @@ class MetaClient:
             "POST", f"/{phone_number_id}/messages", token=business_token, json=payload
         )
 
+    async def get_phone_info(
+        self, phone_number_id: str, business_token: str
+    ) -> dict[str, Any]:
+        """Fetch display info about a phone number. Returns empty dict on failure."""
+        if self.mock:
+            return {}
+        try:
+            r = await self._request(
+                "GET",
+                f"/{phone_number_id}",
+                token=business_token,
+                params={"fields": "display_phone_number,verified_name,quality_rating"},
+            )
+            return {
+                "display_phone_number": r.get("display_phone_number"),
+                "verified_name": r.get("verified_name"),
+                "quality_rating": r.get("quality_rating"),
+            }
+        except Exception as e:
+            logger.warning(f"get_phone_info failed for {phone_number_id}: {e}")
+            return {}
+
+    async def get_waba_info(
+        self, waba_id: str, business_token: str
+    ) -> dict[str, Any]:
+        """Fetch WABA metadata. Returns empty dict on failure."""
+        if self.mock:
+            return {}
+        try:
+            r = await self._request(
+                "GET",
+                f"/{waba_id}",
+                token=business_token,
+                params={"fields": "name,business_verification_status,owner_business"},
+            )
+            return {
+                "name": r.get("name"),
+                "business_id": (r.get("owner_business") or {}).get("id")
+                if isinstance(r.get("owner_business"), dict)
+                else None,
+            }
+        except Exception as e:
+            logger.warning(f"get_waba_info failed for {waba_id}: {e}")
+            return {}
+
     async def list_templates(
         self, waba_id: str, business_token: str
     ) -> list[dict[str, Any]]:
